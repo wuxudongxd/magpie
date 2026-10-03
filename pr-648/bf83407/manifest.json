@@ -1,0 +1,36 @@
+{
+  "summary": "资源库里服务器/技能行的「全部」与 Agent 图标之间新增了一个占位元素（::before，宽度按 --lib-agent-count 计算），悬停展开时它收窄，使「全部」按钮和整行宽度保持不动；同时只有 data-agent 的图标参与悬停时的外边距展开。效果是悬停「全部」时图标仍会扇形展开，但行不再因宽度变化而抖动。",
+  "scenes": [
+    {
+      "title": "资源库行内 Agent 图标的悬停展开",
+      "shots": [
+        {
+          "file": "02-lib-row-idle.png",
+          "caption": "指针不在行上时，服务器行的「全部」与 Agent 图标",
+          "width": 2560
+        },
+        {
+          "file": "03-lib-row-hover-all.png",
+          "caption": "悬停「全部」、图标展开后，同一行「全部」的位置与行高",
+          "width": 2560
+        },
+        {
+          "file": "04-lib-row-hover-away.png",
+          "caption": "指针移开后的同一行",
+          "width": 2560
+        }
+      ]
+    }
+  ],
+  "video": "preview.mp4",
+  "poster": "poster.png",
+  "errors": [
+    "资源库行内 Agent 图标的悬停展开 · shot .lib-row: nothing visible matches .lib-row (0 in the page)"
+  ],
+  "leak": false,
+  "skipped": null,
+  "mismatch": "描述里只提到回归测试，没有声称新增设置项、页面或按钮，diff 里也没有对应的 UI 改动，因此没有可指认的不符之处。",
+  "unseen": "沙盒里只有刚装好的少量 Agent，也没有 14 个 Agent 的服务器行，无法展示描述里 560px 窄宽下的换行与 60 帧指针静止不抖的用例；悬停展开的过程是一段动画，「全部」位置是否稳定只能靠悬停前/中后的静态截图比对，抖动本身在截图里看不到。若沙盒的 MCP 服务器/技能标签下没有带 Agent 图标的行，展开与占位也无从展示。",
+  "interactive": true,
+  "pages": 2
+}

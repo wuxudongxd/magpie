@@ -1,0 +1,14 @@
+<!doctype html><html lang="zh"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>#648 界面预览 · bf83407</title>
+<style>:root{color-scheme:light dark;--bg:#f6f6f7;--fg:#1d1d1f;--muted:#6e6e73;--card:#fff;--line:#e5e5ea}
+@media (prefers-color-scheme:dark){:root{--bg:#111113;--fg:#f2f2f4;--muted:#9a9aa0;--card:#1c1c1f;--line:#2c2c30}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,"Segoe UI","PingFang SC","Noto Sans CJK SC",sans-serif}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 60px}h1{font-size:20px;margin:0 0 4px}.m{color:var(--muted);font-size:13px;margin:0 0 20px}
+video,img{display:block;width:100%;border-radius:10px;border:1px solid var(--line);background:var(--card)}figure{margin:0 0 28px}figcaption{color:var(--muted);font-size:13px;margin-top:8px}
+a{color:inherit}</style>
+<main><h1>#648 界面预览</h1><p class="m">commit bf83407 · <a href="https://github.com/yetone/magpie/pull/648">回到 PR</a> · 资源库里服务器/技能行的「全部」与 Agent 图标之间新增了一个占位元素（::before，宽度按 --lib-agent-count 计算），悬停展开时它收窄，使「全部」按钮和整行宽度保持不动；同时只有 data-agent 的图标参与悬停时的外边距展开。效果是悬停「全部」时图标仍会扇形展开，但行不再因宽度变化而抖动。</p>
+<figure><video src="preview.mp4" controls autoplay muted playsinline poster="poster.png"></video><figcaption>红线是鼠标走过的轨迹，红色圆环是一次点击；底部文字是这一步在做什么。空格暂停，← → 逐段查看。</figcaption></figure>
+<figure><img src="02-lib-row-idle.png" alt="指针不在行上时，服务器行的「全部」与 Agent 图标"><figcaption>资源库行内 Agent 图标的悬停展开 · 指针不在行上时，服务器行的「全部」与 Agent 图标</figcaption></figure>
+<figure><img src="03-lib-row-hover-all.png" alt="悬停「全部」、图标展开后，同一行「全部」的位置与行高"><figcaption>资源库行内 Agent 图标的悬停展开 · 悬停「全部」、图标展开后，同一行「全部」的位置与行高</figcaption></figure>
+<figure><img src="04-lib-row-hover-away.png" alt="指针移开后的同一行"><figcaption>资源库行内 Agent 图标的悬停展开 · 指针移开后的同一行</figcaption></figure>
+</main></html>
