@@ -9,6 +9,15 @@ import (
 	"github.com/yetone/magpie/internal/catalog"
 )
 
+func catalogJSON(t *testing.T, ms []catalog.Model) []byte {
+	t.Helper()
+	b, err := Catalog(ms)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
+}
+
 // Codex's own models, routed through magpie, keep what Codex knows of them
 // — image input, context window, tools — under magpie's id; a third-party
 // model gets the generic entry.
@@ -24,7 +33,7 @@ func TestCodexCatalogKeepsOwnEntries(t *testing.T) {
 	var got struct {
 		Models []map[string]any `json:"models"`
 	}
-	if err := json.Unmarshal(Catalog([]catalog.Model{
+	if err := json.Unmarshal(catalogJSON(t, []catalog.Model{
 		{ID: "deepseek/deepseek-chat", Name: "deepseek-chat · DeepSeek"},
 		{ID: "codex/gpt-5.5", Name: "GPT-5.5 · Codex", Efforts: []string{"low", "high"}},
 	}), &got); err != nil || len(got.Models) != 2 {
@@ -58,7 +67,7 @@ func TestCodexCatalogImages(t *testing.T) {
 			Modalities []string `json:"input_modalities"`
 		} `json:"models"`
 	}
-	json.Unmarshal(Catalog([]catalog.Model{
+	json.Unmarshal(catalogJSON(t, []catalog.Model{
 		{ID: "a/text", Name: "text"},
 		{ID: "a/vision", Name: "vision", Images: true},
 	}), &got)
@@ -76,7 +85,7 @@ func TestCodexCatalogToolSearch(t *testing.T) {
 	var got struct {
 		Models []map[string]any `json:"models"`
 	}
-	json.Unmarshal(Catalog([]catalog.Model{
+	json.Unmarshal(catalogJSON(t, []catalog.Model{
 		{ID: "group/auto-gemini-3-8-flash", Name: "auto", Context: 996147, Efforts: []string{"low", "medium", "high"}, Images: true},
 	}), &got)
 	if len(got.Models) != 1 {
@@ -101,7 +110,7 @@ func TestCodexCatalogParallelToolCalls(t *testing.T) {
 	var got struct {
 		Models []map[string]any `json:"models"`
 	}
-	json.Unmarshal(Catalog([]catalog.Model{{ID: "fake/m1", Name: "m1"}, {ID: "group/auto", Name: "auto"}}), &got)
+	json.Unmarshal(catalogJSON(t, []catalog.Model{{ID: "fake/m1", Name: "m1"}, {ID: "group/auto", Name: "auto"}}), &got)
 	if len(got.Models) != 2 {
 		t.Fatalf("%v", got)
 	}
@@ -131,7 +140,7 @@ func TestCodexCatalogServiceTiers(t *testing.T) {
 			} `json:"service_tiers"`
 		} `json:"models"`
 	}
-	json.Unmarshal(Catalog([]catalog.Model{
+	json.Unmarshal(catalogJSON(t, []catalog.Model{
 		{ID: "codex/gpt-6-astra", Name: "GPT-6 Astra · Codex"},
 		{ID: "codex/gpt-6-sol", Name: "GPT-6 Sol · Codex"},
 		{ID: "copilot/gpt-6-sol", Name: "GPT-6 Sol · Copilot"},

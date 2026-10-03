@@ -16,7 +16,7 @@ func TestEntriesCarryContextWindow(t *testing.T) {
 	var got struct {
 		Models []map[string]any `json:"models"`
 	}
-	json.Unmarshal(Catalog([]catalog.Model{{ID: "relay/glm-4.6", Context: 204800}, {ID: "relay/x"}}), &got)
+	json.Unmarshal(catalogJSON(t, []catalog.Model{{ID: "relay/glm-4.6", Context: 204800}, {ID: "relay/x"}}), &got)
 	if len(got.Models) != 2 || got.Models[0]["context_window"] != float64(204800) {
 		t.Fatalf("%+v", got.Models)
 	}

@@ -693,7 +693,12 @@ func (s *Server) codexModels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if own == nil {
-		for _, e := range codexcat.CacheEntries() {
+		cached, err := codexcat.CacheEntriesWithError()
+		if err != nil {
+			writeError(w, provider.Responses, http.StatusBadGateway, err.Error())
+			return
+		}
+		for _, e := range cached {
 			own = append(own, e)
 		}
 	}
@@ -723,6 +728,31 @@ func (s *Server) codexModels(w http.ResponseWriter, r *http.Request) {
 		}
 		own = kept
 	}
+	// The subscription's Contexts also apply to the native models Codex
+	// reaches on its own sign-in. Keep every other field of the backend's
+	// entry, and leave windows without an explicit setting as they were.
+	windows := provider.CodexNativeContexts()
+	originals := ""
+	if len(windows) > 0 {
+		var err error
+		originals, err = codexcat.RememberContexts(own)
+		if err != nil {
+			writeError(w, provider.Responses, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	for _, m := range own {
+		if o, ok := m.(map[string]any); ok {
+			slug, _ := o["slug"].(string)
+			n := windows[slug]
+			if n == 0 {
+				n = windows["*"]
+			}
+			if n > 0 {
+				o["context_window"] = n
+			}
+		}
+	}
 	// multi-agent V1 when the user asked for it (#141): the version is all
 	// that changes
 	if codexcat.V1() {
@@ -733,9 +763,14 @@ func (s *Server) codexModels(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	ms := provider.CodexListed()
+	entries, err := codexcat.Entries(ms, len(own)+100)
+	if err != nil {
+		writeError(w, provider.Responses, http.StatusBadGateway, err.Error())
+		return
+	}
 	// the list is the backend's and magpie's, and so is its ETag
-	w.Header().Set("ETag", codexcat.WithTag(etag, provider.CodexListTag()))
-	writeJSON(w, 200, map[string]any{"models": append(own, codexcat.Entries(ms, len(own)+100)...)})
+	w.Header().Set("ETag", codexcat.ContextsETag(etag, provider.CodexListTagWithContexts(windows), originals))
+	writeJSON(w, 200, map[string]any{"models": append(own, entries...)})
 }
 
 // modelsEtag is the X-Models-Etag of a backend reply as Codex should read
@@ -743,7 +778,7 @@ func (s *Server) codexModels(w http.ResponseWriter, r *http.Request) {
 // change to either has Codex ask for the list again.
 func modelsEtag(h http.Header) {
 	if v := h.Get("X-Models-Etag"); v != "" {
-		h.Set("X-Models-Etag", codexcat.WithTag(v, provider.CodexListTag()))
+		h.Set("X-Models-Etag", codexcat.ResponseETag(v, provider.CodexListTag()))
 	}
 }
 

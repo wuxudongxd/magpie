@@ -370,17 +370,41 @@ func CodexNativeHidden() map[string]bool {
 	return out
 }
 
-// CodexListTag names the list Codex is handed, for its ETag: magpie's models
-// and the account's own taken out of it, and whether its OpenAI models say
-// multi-agent V1 (settings.CodexAgentsV1), so any of them changing has
-// Codex ask for the list again.
+// CodexNativeContexts is the user's context settings on the Codex
+// subscription, by native slug or "*". Read the stored picks directly:
+// these also apply to the models Codex reaches on its own sign-in while
+// subscription sharing is off, and to new models in the backend's list.
+func CodexNativeContexts() map[string]int {
+	for _, p := range load().Providers {
+		if p.ID == "codex" {
+			out := map[string]int{}
+			for slug, n := range p.Contexts {
+				if n > 0 {
+					out[slug] = n
+				}
+			}
+			return out
+		}
+	}
+	return nil
+}
+
+// CodexListTag names the list Codex is handed, for its ETag: magpie's models,
+// the account's own taken out of it, native context settings and whether
+// its OpenAI models say multi-agent V1. Any change has Codex ask again.
 func CodexListTag() string {
+	return CodexListTagWithContexts(CodexNativeContexts())
+}
+
+// CodexListTagWithContexts uses the same context settings that were applied
+// to a list, even if the user saves new settings while it is being served.
+func CodexListTagWithContexts(windows map[string]int) string {
 	ms := CodexListed()
 	off := slices.Sorted(maps.Keys(CodexNativeHidden()))
 	for _, slug := range off {
 		ms = append(ms, catalog.Model{ID: "-" + slug})
 	}
-	return codexcat.PolicyTag(codexcat.Tag(ms))
+	return codexcat.PolicyTag(codexcat.ContextTag(codexcat.Tag(ms), windows))
 }
 
 // CodexNativePicked is the set of the ChatGPT account's own model slugs the
