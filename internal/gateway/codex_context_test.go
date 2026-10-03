@@ -126,3 +126,60 @@ func TestCodexNativeContextWindows(t *testing.T) {
 		})
 	}
 }
+
+func TestCodexThirdPartyContextOverrides(t *testing.T) {
+	codexSignedIn(t)
+	const source = `{"models":[{"slug":"gpt-6.1-sol","context_window":272000}]}`
+	up := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		io.WriteString(w, source)
+	}))
+	defer up.Close()
+	was := provider.CodexBase
+	provider.CodexBase = up.URL + "/backend-api/codex"
+	t.Cleanup(func() { provider.CodexBase = was })
+	if err := catalog.SaveLive("relay", up.URL, []catalog.Model{
+		{ID: "model-a", Context: 128000},
+		{ID: "model-b", Context: 1000000},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := provider.Save(provider.Provider{
+		ID: "relay", Name: "Relay", Chat: up.URL, Key: "test",
+		Models:   []string{"model-a", "model-b"},
+		Contexts: map[string]int{"*": 300000, "model-a": 256000},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	New().Handler().ServeHTTP(rec, httptest.NewRequest("GET", CodexPath+"/models", nil))
+	if rec.Code != 200 {
+		t.Fatalf("%d %s", rec.Code, rec.Body.String())
+	}
+	catalogBytes, err := codexcat.Catalog(provider.CodexListed())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, b := range map[string][]byte{"native": rec.Body.Bytes(), "catalog": catalogBytes} {
+		var list struct {
+			Models []map[string]any `json:"models"`
+		}
+		if err := json.Unmarshal(b, &list); err != nil {
+			t.Fatal(err)
+		}
+		windows := map[string]any{}
+		for _, m := range list.Models {
+			windows[m["slug"].(string)] = m["context_window"]
+		}
+		for slug, want := range map[string]int{
+			"relay/model-a": 256000,
+			"relay/model-b": 300000,
+		} {
+			if windows[slug] != float64(want) {
+				t.Errorf("%s: %s context_window = %v, want %d", name, slug, windows[slug], want)
+			}
+		}
+		if name == "native" && windows["gpt-6.1-sol"] != float64(272000) {
+			t.Errorf("native context changed: %v", windows["gpt-6.1-sol"])
+		}
+	}
+}
