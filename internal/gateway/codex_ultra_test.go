@@ -137,7 +137,13 @@ func TestCopilotSolOffersUltra(t *testing.T) {
 	var cat struct {
 		Models []map[string]any `json:"models"`
 	}
-	json.Unmarshal(codexcat.Catalog(provider.CodexListed()), &cat)
+	catalogBytes, err := codexcat.Catalog(provider.CodexListed())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(catalogBytes, &cat); err != nil {
+		t.Fatal(err)
+	}
 	found := 0
 	for _, m := range cat.Models {
 		var efforts []string

@@ -23,7 +23,11 @@ func TestDescribedModelsTakeImagesInAgentsLists(t *testing.T) {
 		return out
 	}
 	modalities := func(id string) []string {
-		b, _ := json.Marshal(codexcat.Entries(provider.CodexListed(), 0))
+		entries, err := codexcat.Entries(provider.CodexListed(), 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		b, _ := json.Marshal(entries)
 		var es []struct {
 			Slug string   `json:"slug"`
 			In   []string `json:"input_modalities"`

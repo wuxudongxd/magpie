@@ -432,7 +432,11 @@ func codexIn(at place) *Agent {
 			if err := putProvider(); err != nil {
 				return err
 			}
-			if err := edit.WriteAtomic(catalogPath, codexcat.Catalog(magpieModels("codex"))); err != nil {
+			b, err := codexcat.Catalog(magpieModels("codex"))
+			if err != nil {
+				return err
+			}
+			if err := edit.WriteAtomic(catalogPath, b); err != nil {
 				return err
 			}
 			// a thread started on Codex's built-in provider stays on it when
@@ -543,7 +547,10 @@ func codexIn(at place) *Agent {
 						return err
 					}
 				}
-				b := codexcat.Catalog(magpieModels("codex"))
+				b, err := codexcat.Catalog(magpieModels("codex"))
+				if err != nil {
+					return err
+				}
 				if cur, _ := edit.Read(catalogPath); string(cur) != string(b) {
 					if err := edit.WriteAtomic(catalogPath, b); err != nil {
 						return err

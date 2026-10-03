@@ -35,7 +35,7 @@ func versions(t *testing.T, ms []catalog.Model) map[string]any {
 	var got struct {
 		Models []map[string]any `json:"models"`
 	}
-	if err := json.Unmarshal(Catalog(ms), &got); err != nil {
+	if err := json.Unmarshal(catalogJSON(t, ms), &got); err != nil {
 		t.Fatal(err)
 	}
 	out := map[string]any{}

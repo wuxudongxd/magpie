@@ -38,21 +38,24 @@ func DefaultEffort(e []string) string {
 }
 
 // Catalog renders models as a whole models.json.
-func Catalog(ms []catalog.Model) []byte {
+func Catalog(ms []catalog.Model) ([]byte, error) {
+	entries, err := Entries(ms, 0)
+	if err != nil {
+		return nil, err
+	}
 	out := struct {
 		Models []any `json:"models"`
-	}{Models: Entries(ms, 0)}
+	}{Models: entries}
 	if out.Models == nil {
 		out.Models = []any{}
 	}
-	b, _ := json.MarshalIndent(out, "", " ")
-	return b
+	return json.MarshalIndent(out, "", " ")
 }
 
 // Entries renders models as models.json entries, ranked after the first
 // `after`. Only fields Codex requires or that change behaviour are set; the
 // rest take Codex's defaults.
-func Entries(ms []catalog.Model, after int) []any {
+func Entries(ms []catalog.Model, after int) ([]any, error) {
 	type level struct {
 		Effort      string `json:"effort"`
 		Description string `json:"description"`
@@ -106,12 +109,22 @@ func Entries(ms []catalog.Model, after int) []any {
 		// alone, and a magpie-served lead writes their tasks as text.
 		MultiAgent string `json:"multi_agent_version,omitempty"`
 	}
-	own := CacheEntries()
+	var own map[string]map[string]any
+	if slices.ContainsFunc(ms, func(m catalog.Model) bool { return strings.HasPrefix(m.ID, "codex/") }) {
+		var err error
+		own, err = CacheEntriesWithError()
+		if err != nil {
+			return nil, err
+		}
+	}
 	v1 := V1()
 	var entries []any
 	for i, m := range ms {
 		if raw, ok := own[strings.TrimPrefix(m.ID, "codex/")]; ok && strings.HasPrefix(m.ID, "codex/") {
 			e := ownEntry(raw, m.ID, m.Name, after+i+1)
+			if m.Context > 0 {
+				e["context_window"] = m.Context
+			}
 			if v1 {
 				Stamp(e)
 			}
@@ -154,23 +167,29 @@ func Entries(ms []catalog.Model, after int) []any {
 		}
 		entries = append(entries, e)
 	}
-	return entries
+	return entries, nil
 }
 
 // CacheEntries is Codex's own models, as models_cache.json describes them
 // for the ChatGPT account it last asked with, by slug.
 func CacheEntries() map[string]map[string]any {
-	home, _ := os.UserHomeDir()
-	b, err := os.ReadFile(filepath.Join(home, ".codex", "models_cache.json"))
+	entries, _ := CacheEntriesWithError()
+	return entries
+}
+
+// CacheEntriesWithError refuses a list whose overridden windows cannot be
+// restored, so it cannot become the source of another overridden cache.
+func CacheEntriesWithError() (map[string]map[string]any, error) {
+	b, err := os.ReadFile(cachePath())
 	if err != nil {
-		return nil
+		return nil, nil
 	}
 	var cache struct {
 		ETag   string           `json:"etag"`
 		Models []map[string]any `json:"models"`
 	}
 	if json.Unmarshal(b, &cache) != nil {
-		return nil
+		return nil, nil
 	}
 	out := map[string]map[string]any{}
 	for _, m := range cache.Models {
@@ -199,7 +218,12 @@ func CacheEntries() map[string]map[string]any {
 			}
 		}))
 	}
-	return out
+	if MarkedContexts(cache.ETag) {
+		if err := restoreContexts(out, cache.ETag); err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
 }
 
 // Codex picks a thread's multi-agent tools by its model's entry: its
@@ -307,6 +331,10 @@ func ownEntry(raw map[string]any, id, name string, priority int) map[string]any 
 // Tag names a list of magpie's models: another list, another tag.
 func Tag(ms []catalog.Model) string {
 	b, _ := json.Marshal(ms)
+	return hashTag(b)
+}
+
+func hashTag(b []byte) string {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:6])
 }
